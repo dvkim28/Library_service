@@ -26,11 +26,16 @@ class Borrowings(models.Model):
         verbose_name_plural = "Borrowings"
 
     def __str__(self):
-        return f"{self.pk} |Book: {self.book.title}, Borrowed at {str(self.borrow_date)} - {self.user.email}"
+        return (
+            f"{self.pk} "
+            f"|Book: {self.book.title},"
+            f" Borrowed at {str(self.borrow_date)} - {self.user.email}"
+        )
 
     def validate_book(self):
         if self.book.inventory == 0:
-            raise ValidationError({"no_book": f"there are no books in the inventory!"})
+            raise ValidationError({"no_book: "
+                                   "there are no books in the inventory!"})
 
     def clean(self):
         super().clean()

@@ -40,7 +40,8 @@ class BorrowingsViewSet(viewsets.ModelViewSet):
             book.save()
         except IntegrityError:
             return Response(
-                {"error": "Book is out of stock"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Book is out of stock"},
+                status=status.HTTP_400_BAD_REQUEST
             )
         self.perform_create(serializer)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
