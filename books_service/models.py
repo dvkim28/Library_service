@@ -1,11 +1,10 @@
-import decimal
-
 from django.db import models
 
 COVER_CHOICE = {
     ("H", "Hard"),
     ("S", "Soft"),
 }
+
 
 class Book(models.Model):
 
