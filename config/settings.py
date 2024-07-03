@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -42,6 +42,10 @@ INSTALLED_APPS = [
     "books_service",
     "users_service",
     "borrowings_service",
+    "telegram_django_bot",
+    "django_json_widget",
+    "django_celery_beat",
+
 ]
 
 MIDDLEWARE = [
@@ -138,3 +142,16 @@ REST_FRAMEWORK = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "users_service.User"
+
+# TELEGRAM NOTIFICATION
+TOKEN = "7248679095:AAG9liBAlkcXY6coIDnpToaZnzO940afRWs"
+CHAT_ID = 826544103
+
+CELERY_BROKER_URL = 'redis://localhost'
+
+CELERY_BEAT_SCHEDULE = {
+    'my-periodic-task': {
+        'task': 'borrowings_service.tasks.get_expired_borrowers',  # Путь к вашей периодической задаче
+        'schedule': timedelta(hours=24),  # Пример: выполнять каждые 30 минут
+    },
+}

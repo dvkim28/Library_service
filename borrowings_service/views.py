@@ -11,6 +11,7 @@ from borrowings_service.serializers import (
     BorrowingListSerializer,
     BorrowingsSerializer,
 )
+from borrowings_service.tasks import send_telegram_message
 
 
 class BorrowingsViewSet(viewsets.ModelViewSet):
@@ -44,6 +45,7 @@ class BorrowingsViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         self.perform_create(serializer)
+        send_telegram_message.delay(serializer.validated_data["user"].email)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
