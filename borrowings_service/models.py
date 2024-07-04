@@ -5,13 +5,13 @@ from rest_framework.exceptions import ValidationError
 from books_service.models import Book
 
 PAYMENTS_CHOICE = [
-    ("Pn", "Pending"),
-    ("Pd", "Paid"),
+    ("Pending", "Pending"),
+    ("Paid", "Paid"),
 ]
 
 PAYMENT_TYPE = [
-    ("P", "PAYMENT"),
-    ("F", "FINE"),
+    ("Payment", "PAYMENT"),
+    ("Fine", "FINE"),
 ]
 
 
@@ -34,8 +34,7 @@ class Borrowings(models.Model):
 
     def validate_book(self):
         if self.book.inventory == 0:
-            raise ValidationError({"no_book: "
-                                   "there are no books in the inventory!"})
+            raise ValidationError({"no_book: " "there are no books in the inventory!"})
 
     def clean(self):
         super().clean()
@@ -47,11 +46,11 @@ class Borrowings(models.Model):
 
 
 class Payment(models.Model):
-    status = models.CharField(choices=PAYMENTS_CHOICE, max_length=2)
-    type = models.CharField(choices=PAYMENT_TYPE, max_length=2)
+    status = models.CharField(choices=PAYMENTS_CHOICE, max_length=10)
+    type = models.CharField(choices=PAYMENT_TYPE, max_length=10)
     borrowing_id = models.ForeignKey(Borrowings, on_delete=models.CASCADE)
     session_url = models.URLField()
-    session_id = models.IntegerField()
+    session_id = models.TextField()
 
     @property
     def money_to_pay(self):

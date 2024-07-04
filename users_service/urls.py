@@ -1,7 +1,7 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework import routers
 
-from users_service.views import UserModelView, ManageUserView
+from users_service.views import ManageUserView, UserModelView
 
 router = routers.DefaultRouter()
 router.register("users", UserModelView)

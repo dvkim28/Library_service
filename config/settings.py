@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
+
 from datetime import timedelta
 from pathlib import Path
 
@@ -20,8 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = ("django-insecure-!j)snkdmj0qmw3esnu"
-              "^*(ht5n^*lw6(ghx(3@$+95u^t$f&*(h")
+SECRET_KEY = "django-insecure-!j)snkdmj0qmw3esnu" "^*(ht5n^*lw6(ghx(3@$+95u^t$f&*(h"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     "telegram_django_bot",
     "django_json_widget",
     "django_celery_beat",
-
 ]
 
 MIDDLEWARE = [
@@ -96,19 +95,16 @@ DATABASES = {
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth."
-                "password_validation.UserAttributeSimilarityValidator",
+        "password_validation.UserAttributeSimilarityValidator",
     },
     {
-        "NAME": "django.contrib.auth."
-                "password_validation.MinimumLengthValidator",
+        "NAME": "django.contrib.auth." "password_validation.MinimumLengthValidator",
     },
     {
-        "NAME": "django.contrib.auth."
-                "password_validation.CommonPasswordValidator",
+        "NAME": "django.contrib.auth." "password_validation.CommonPasswordValidator",
     },
     {
-        "NAME": "django.contrib.auth."
-                "password_validation.NumericPasswordValidator",
+        "NAME": "django.contrib.auth." "password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -147,11 +143,17 @@ AUTH_USER_MODEL = "users_service.User"
 TOKEN = "7248679095:AAG9liBAlkcXY6coIDnpToaZnzO940afRWs"
 CHAT_ID = 826544103
 
-CELERY_BROKER_URL = 'redis://localhost'
+CELERY_BROKER_URL = "redis://localhost"
 
 CELERY_BEAT_SCHEDULE = {
-    'my-periodic-task': {
-        'task': 'borrowings_service.tasks.get_expired_borrowers',  # Путь к вашей периодической задаче
-        'schedule': timedelta(seconds=10),  # Пример: выполнять каждые 30 минут
+    "my-periodic-task": {
+        "task": "borrowings_service.tasks.get_expired_borrowers",
+        "schedule": timedelta(hours=24),
     },
 }
+
+STRIPE_PUBLISHABLE_KEY = "pk_test_51PYnmuRrdTOcqF85nOsH2HXBPdXP9IiMTPkXa5p3ZI0uEAiElxPM76jwmmVXEGXAlLOdMTQc5uEAoM7AkjuRbGWy00L34VHIRl"
+STRIPE_SECRET_KEY = "sk_test_51PYnmuRrdTOcqF85enE9fmeXq54c9MqipsLk7NmNpMzq1t3V3krGs8FQSYWJg1MCdTt1bJcFxSowIYTVPOnmjSyY00komg4ehi"
+STRIPE_WEBHOOK_SECRET = "whsec_f91122d79a432425308a379afb3f05f364d6a81fdb8dcf08784fb6c6124d08a4"
+
+DOMAIN_URL="http://127.0.0.1:8000"

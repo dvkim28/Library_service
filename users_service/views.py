@@ -1,8 +1,8 @@
 from django.contrib.auth import get_user_model
-from rest_framework import viewsets, generics
+from rest_framework import generics, viewsets
 
 from users_service.models import User
-from users_service.serializers import UserSerializer, ManageUserSerializer
+from users_service.serializers import ManageUserSerializer, UserSerializer
 
 
 class UserModelView(viewsets.ModelViewSet):
