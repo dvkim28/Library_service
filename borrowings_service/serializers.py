@@ -39,5 +39,3 @@ class PaymentSerializer(serializers.ModelSerializer):
             "session_url",
             "session_id",
         ]
-
-

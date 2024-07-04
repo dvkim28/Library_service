@@ -34,7 +34,7 @@ class Borrowings(models.Model):
 
     def validate_book(self):
         if self.book.inventory == 0:
-            raise ValidationError({"no_book: " "there are no books in the inventory!"})
+            raise ValidationError("there are no books in the inventory!")
 
     def clean(self):
         super().clean()
@@ -49,8 +49,8 @@ class Payment(models.Model):
     status = models.CharField(choices=PAYMENTS_CHOICE, max_length=10)
     type = models.CharField(choices=PAYMENT_TYPE, max_length=10)
     borrowing_id = models.ForeignKey(Borrowings, on_delete=models.CASCADE)
-    session_url = models.URLField()
-    session_id = models.TextField()
+    session_url = models.URLField(blank=True)
+    session_id = models.TextField(blank=True)
 
     @property
     def money_to_pay(self):

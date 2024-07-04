@@ -1,5 +1,4 @@
 import stripe
-from celery.beat import logger
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse
 from django.utils import timezone
@@ -10,10 +9,12 @@ from rest_framework.response import Response
 
 from books_service.models import Book
 from borrowings_service.models import Borrowings, Payment
-from borrowings_service.serializers import (BorrowingListSerializer,
-                                            BorrowingsSerializer,
-                                            PaymentSerializer)
-from borrowings_service.tasks import send_telegram_message, close_borriwing
+from borrowings_service.serializers import (
+    BorrowingListSerializer,
+    BorrowingsSerializer,
+    PaymentSerializer,
+)
+from borrowings_service.tasks import close_borriwing, send_telegram_message
 from config import settings
 from config.settings import DOMAIN_URL
 
@@ -116,26 +117,25 @@ def post(request, *args, **kwargs):
         currency="usd",
         product_data={
             "name": f"Payment for borrowing {payment.borrowing_id.book.title}"
-        }
+        },
     )
     try:
         checkout_session = stripe.checkout.Session.create(
             line_items=[
                 {
-                    'price': price.id,
-                    'quantity': 1,
+                    "price": price.id,
+                    "quantity": 1,
                 },
             ],
-            mode='payment',
-            success_url=DOMAIN_URL + '/success.html',
-            cancel_url=DOMAIN_URL + '/cancel.html',
+            mode="payment",
+            success_url=DOMAIN_URL + "/success.html",
+            cancel_url=DOMAIN_URL + "/cancel.html",
             metadata={
                 "payment_pk": payment_pk,
-            }
-
+            },
         )
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     payment.session_url = checkout_session.url
     payment.session_id = checkout_session.id
     payment.save()
@@ -145,20 +145,17 @@ def post(request, *args, **kwargs):
 @csrf_exempt
 def webhook(request):
     payload = request.body
-    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+    sig_header = request.META["HTTP_STRIPE_SIGNATURE"]
     endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, endpoint_secret
-        )
-    except ValueError as e:
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except ValueError:
         return HttpResponse(status=400)
-    except stripe.error.SignatureVerificationError as e:
+    except stripe.error.SignatureVerificationError:
         return HttpResponse(status=400)
 
-    if event['type'] == 'checkout.session.completed':
-        payment = event['data']['object']['metadata']['payment_pk']
+    if event["type"] == "checkout.session.completed":
+        payment = event["data"]["object"]["metadata"]["payment_pk"]
         close_borriwing.delay(payment)
     return HttpResponse(status=200)
-

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -21,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-!j)snkdmj0qmw3esnu" "^*(ht5n^*lw6(ghx(3@$+95u^t$f&*(h"
+SECRET_KEY = os.environ["SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -140,10 +141,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "users_service.User"
 
 # TELEGRAM NOTIFICATION
-TOKEN = "7248679095:AAG9liBAlkcXY6coIDnpToaZnzO940afRWs"
-CHAT_ID = 826544103
+TOKEN = os.environ["TOKEN"]
+CHAT_ID = os.environ["CHAT_ID"]
 
-CELERY_BROKER_URL = "redis://localhost"
+CELERY_BROKER_URL = os.environ["CELERY_BROKER_URL"]
 
 CELERY_BEAT_SCHEDULE = {
     "my-periodic-task": {
@@ -152,8 +153,8 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-STRIPE_PUBLISHABLE_KEY = "pk_test_51PYnmuRrdTOcqF85nOsH2HXBPdXP9IiMTPkXa5p3ZI0uEAiElxPM76jwmmVXEGXAlLOdMTQc5uEAoM7AkjuRbGWy00L34VHIRl"
-STRIPE_SECRET_KEY = "sk_test_51PYnmuRrdTOcqF85enE9fmeXq54c9MqipsLk7NmNpMzq1t3V3krGs8FQSYWJg1MCdTt1bJcFxSowIYTVPOnmjSyY00komg4ehi"
-STRIPE_WEBHOOK_SECRET = "whsec_f91122d79a432425308a379afb3f05f364d6a81fdb8dcf08784fb6c6124d08a4"
+STRIPE_PUBLISHABLE_KEY = os.environ["STRIPE_PUBLISHABLE_KEY"]
+STRIPE_SECRET_KEY = os.environ["STRIPE_SECRET_KEY"]
+STRIPE_WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
 
-DOMAIN_URL="http://127.0.0.1:8000"
+DOMAIN_URL = os.environ["DOMAIN_URL"]
