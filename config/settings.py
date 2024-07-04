@@ -152,6 +152,6 @@ CELERY_BROKER_URL = 'redis://localhost'
 CELERY_BEAT_SCHEDULE = {
     'my-periodic-task': {
         'task': 'borrowings_service.tasks.get_expired_borrowers',  # Путь к вашей периодической задаче
-        'schedule': timedelta(hours=24),  # Пример: выполнять каждые 30 минут
+        'schedule': timedelta(seconds=10),  # Пример: выполнять каждые 30 минут
     },
 }
