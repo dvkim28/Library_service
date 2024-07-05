@@ -12,7 +12,6 @@ from config.settings import CHAT_ID, TOKEN
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-
 app = Celery("telegram_bot", broker="redis://localhost")
 
 
@@ -39,38 +38,39 @@ def close_borriwing(payment_pk: int) -> None:
 
 
 @shared_task
-def get_expired_borrowers():
+def get_expired_borrowers_daily():
     borrowers_list = []
     borrowings = Borrowings.objects.filter(actual_return_date__isnull=True)
     current_datetime = timezone.now().date()
-    for borrowing in borrowings:
-        if borrowing.expected_return_date is not None:
-            expiration_days = (current_datetime - borrowing.expected_return_date).days
-            borrower_data = {
-                "borrower": borrowing.user.email,
-                "expiration": expiration_days,
-            }
-            borrowers_list.append(borrower_data)
+    if len(borrowings) > 0:
+        for borrowing in borrowings:
+            if borrowing.expected_return_date is not None:
+                expiration_days = (current_datetime - borrowing.expected_return_date).days
+                borrower_data = {
+                    "borrower": borrowing.user.email,
+                    "expiration": expiration_days,
+                }
+                borrowers_list.append(borrower_data)
     send_telegram_borrowed_task(borrowers_list)
 
 
 def send_telegram_borrowed_task(borrowers_list: list):
-    if not borrowers_list:
-        return
-
-    message = "There are/is borrowers\n"
-    counter = 1
-    for borrower in borrowers_list:
-        user_email = borrower["borrower"]
-        expiration = borrower["expiration"]
-        message += f"{counter}. {user_email}" f" - borrowed for {expiration} day/s\n"
-        counter += 1
-    url = (
-        f"https://api.telegram.org/bot{TOKEN}"
-        f"/sendMessage?chat_id={CHAT_ID}&text={message}"
-    )
+    if len(borrowers_list) > 0:
+        message = "There are/is borrowers\n"
+        counter = 1
+        for borrower in borrowers_list:
+            user_email = borrower["borrower"]
+            expiration = borrower["expiration"]
+            message += f"{counter}. {user_email}" f" - overdue for {expiration} day/s\n"
+            counter += 1
+    else:
+        message = "No borrowings overdue today!"
 
     try:
+        url = (
+            f"https://api.telegram.org/bot{TOKEN}"
+            f"/sendMessage?chat_id={CHAT_ID}&text={message}"
+        )
         response = requests.get(url)
         response.raise_for_status()
         logger.info(
