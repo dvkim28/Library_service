@@ -4,7 +4,6 @@ from django.http import HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from books_service.models import Book
@@ -14,7 +13,7 @@ from borrowings_service.serializers import (
     BorrowingsSerializer,
     PaymentSerializer,
 )
-from borrowings_service.tasks import close_borriwing, send_telegram_message
+from borrowings_service.tasks import send_telegram_message, get_paid_for_borrowing
 from config import settings
 from config.settings import DOMAIN_URL
 
@@ -112,7 +111,7 @@ def create_stripe_payment(borrowing):
             success_url=DOMAIN_URL + "/success.html",
             cancel_url=DOMAIN_URL + "/cancel.html",
             metadata={
-                "payment_pk": borrowing.book.title,
+                "payment_pk": payment.id,
             },
         )
     except Exception as e:
@@ -156,17 +155,9 @@ def webhook(request):
     # Handle the event
     if event["type"] == "checkout.session.completed":
         try:
-            payment = event["data"]["object"]["metadata"]["payment_pk"]
-            print("Processing payment:", payment)
-            # Implement your business logic here, e.g., close_borrowing(payment)
-            # close_borrowing(payment)
-        except KeyError as e:
-            # Handle missing keys in event data
-            print(f"Missing key in event data: {e}")
-            return HttpResponse(status=400)
-        except Exception as e:
-            # Catch any other exceptions during event handling
-            print(f"Error processing event: {e}")
+            payment_pk = event["data"]["object"]["metadata"]["payment_pk"]
+            print(payment_pk)
+            get_paid_for_borrowing.delay(payment_pk)
+        except Exception:
             return HttpResponse(status=500)
-
     return HttpResponse(status=200)

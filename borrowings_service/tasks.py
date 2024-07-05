@@ -27,7 +27,7 @@ def send_telegram_message(borrow_user: str):
 
 
 @shared_task
-def close_borriwing(payment_pk: int) -> None:
+def get_paid_for_borrowing(payment_pk: int) -> None:
     payment = Payment.objects.get(id=payment_pk)
     payment.status = "Paid"
     payment.borrowing_id.actual_return_date = timezone.now().date()
@@ -65,7 +65,6 @@ def send_telegram_borrowed_task(borrowers_list: list):
             counter += 1
     else:
         message = "No borrowings overdue today!"
-
     try:
         url = (
             f"https://api.telegram.org/bot{TOKEN}"
