@@ -152,8 +152,8 @@ CELERY_BROKER_URL = os.environ["CELERY_BROKER_URL"]
 
 CELERY_BEAT_SCHEDULE = {
     "my-periodic-task": {
-        "task": "borrowings_service.tasks.get_expired_borrowers",
-        "schedule": timedelta(hours=24),
+        "task": "borrowings_service.tasks.get_expired_borrowers_daily",
+        "schedule": timedelta(seconds=10),
     },
 }
 
