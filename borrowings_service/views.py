@@ -50,7 +50,12 @@ class BorrowingsViewSet(viewsets.ModelViewSet):
             return Response(
                 {"error": "Book is out of stock"}, status=status.HTTP_400_BAD_REQUEST
             )
+        borrowing = serializer.save()
         self.perform_create(serializer)
+        Payment.objects.create(
+            borrowing_id=borrowing,
+        )
+        create_stripe_payment(borrowing)
         send_telegram_message.delay(serializer.validated_data["user"].email)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -85,38 +90,14 @@ class PaymentsViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(borrowing_id__user=self.request.user)
 
 
-@api_view(["POST"])
-def return_borrowings(request, pk):
-    try:
-        borrowing = Borrowings.objects.get(id=pk)
-        if not borrowing.actual_return_date:
-            with transaction.atomic():
-                borrowing.actual_return_date = timezone.now()
-                borrowing.book.inventory += 1
-                borrowing.book.save()
-                borrowing.save()
-            serializer = BorrowingsSerializer(borrowing)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-    except Borrowings.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(["POST"])
-def post(request, *args, **kwargs):
-    payment_pk = kwargs.get("pk")
-    payment = Payment.objects.get(id=payment_pk)
-    period = (timezone.now().date() - payment.borrowing_id.borrow_date).days
-    amount_to_pay = period * payment.borrowing_id.book.daily_fee
-
+def create_stripe_payment(borrowing):
+    payment = Payment.objects.get(borrowing_id=borrowing)
+    amount_to_pay = get_fee_if_borrowing_overdue(borrowing)
     price = stripe.Price.create(
         unit_amount=int(amount_to_pay * 100),
         currency="usd",
         product_data={
-            "name": f"Payment for borrowing {payment.borrowing_id.book.title}"
+            "name": f"Payment for borrowing {borrowing.book.title}"
         },
     )
     try:
@@ -131,7 +112,7 @@ def post(request, *args, **kwargs):
             success_url=DOMAIN_URL + "/success.html",
             cancel_url=DOMAIN_URL + "/cancel.html",
             metadata={
-                "payment_pk": payment_pk,
+                "payment_pk": borrowing.book.title,
             },
         )
     except Exception as e:
@@ -142,20 +123,50 @@ def post(request, *args, **kwargs):
     return Response(checkout_session, status=status.HTTP_201_CREATED)
 
 
+def get_fee_if_borrowing_overdue(borrowing):
+    period = (timezone.now().date() - borrowing.borrow_date).days
+    if timezone.now().date() > borrowing.expected_return_date:
+        amount_to_pay = (period * borrowing.book.daily_fee) * 2
+    else:
+        amount_to_pay = (period * borrowing.book.daily_fee)
+    return amount_to_pay
+
+
 @csrf_exempt
 def webhook(request):
     payload = request.body
-    sig_header = request.META["HTTP_STRIPE_SIGNATURE"]
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
     endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-    except ValueError:
+    except ValueError as e:
+        # Invalid payload
+        print(f"Invalid payload: {e}")
         return HttpResponse(status=400)
-    except stripe.error.SignatureVerificationError:
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        print(f"Invalid signature: {e}")
         return HttpResponse(status=400)
+    except Exception as e:
+        # Catch any other unexpected exceptions
+        print(f"Unexpected error: {e}")
+        return HttpResponse(status=500)
 
+    # Handle the event
     if event["type"] == "checkout.session.completed":
-        payment = event["data"]["object"]["metadata"]["payment_pk"]
-        close_borriwing.delay(payment)
+        try:
+            payment = event["data"]["object"]["metadata"]["payment_pk"]
+            print("Processing payment:", payment)
+            # Implement your business logic here, e.g., close_borrowing(payment)
+            # close_borrowing(payment)
+        except KeyError as e:
+            # Handle missing keys in event data
+            print(f"Missing key in event data: {e}")
+            return HttpResponse(status=400)
+        except Exception as e:
+            # Catch any other exceptions during event handling
+            print(f"Error processing event: {e}")
+            return HttpResponse(status=500)
+
     return HttpResponse(status=200)
