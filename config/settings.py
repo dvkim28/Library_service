@@ -136,7 +136,7 @@ STATIC_URL = "static/"
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
+        "borrowings_service.permissions.IsAdminAllOrIfAuthenticatedReadOnly",
     ],
     # "DEFAULT_AUTHENTICATION_CLASSES": (
     #     "rest_framework_simplejwt.authentication.JWTAuthentication",
