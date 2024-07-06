@@ -5,7 +5,6 @@ from django.utils.translation import gettext_lazy as _
 
 
 class UserManager(BaseUserManager):
-    """Define a model manager for User model with no username field."""
 
     use_in_migrations = True
 
