@@ -45,7 +45,9 @@ def get_expired_borrowers_daily():
     if len(borrowings) > 0:
         for borrowing in borrowings:
             if borrowing.expected_return_date is not None:
-                expiration_days = (current_datetime - borrowing.expected_return_date).days
+                expiration_days = (
+                    current_datetime - borrowing.expected_return_date
+                ).days
                 borrower_data = {
                     "borrower": borrowing.user.email,
                     "expiration": expiration_days,
@@ -61,7 +63,8 @@ def send_telegram_borrowed_task(borrowers_list: list):
         for borrower in borrowers_list:
             user_email = borrower["borrower"]
             expiration = borrower["expiration"]
-            message += f"{counter}. {user_email}" f" - overdue for {expiration} day/s\n"
+            message += f"{counter}. {user_email}" \
+                       f" - overdue for {expiration} day/s\n"
             counter += 1
     else:
         message = "No borrowings overdue today!"

@@ -13,7 +13,10 @@ from borrowings_service.serializers import (
     BorrowingsSerializer,
     PaymentSerializer,
 )
-from borrowings_service.tasks import send_telegram_message, get_paid_for_borrowing
+from borrowings_service.tasks import (
+    send_telegram_message,
+    get_paid_for_borrowing
+)
 from config import settings
 from config.settings import DOMAIN_URL
 
@@ -47,7 +50,8 @@ class BorrowingsViewSet(viewsets.ModelViewSet):
             book.save()
         except IntegrityError:
             return Response(
-                {"error": "Book is out of stock"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Book is out of stock"},
+                status=status.HTTP_400_BAD_REQUEST
             )
         borrowing = serializer.save()
         self.perform_create(serializer)
@@ -95,9 +99,7 @@ def create_stripe_payment(borrowing):
     price = stripe.Price.create(
         unit_amount=int(amount_to_pay * 100),
         currency="usd",
-        product_data={
-            "name": f"Payment for borrowing {borrowing.book.title}"
-        },
+        product_data={"name": f"Payment for borrowing {borrowing.book.title}"},
     )
     try:
         checkout_session = stripe.checkout.Session.create(
@@ -123,11 +125,15 @@ def create_stripe_payment(borrowing):
 
 
 def get_fee_if_borrowing_overdue(borrowing):
-    period = (timezone.now().date() - borrowing.borrow_date).days
+    expected_period = ((borrowing.expected_return_date - borrowing.borrow_date)
+                       .days)
     if timezone.now().date() > borrowing.expected_return_date:
-        amount_to_pay = (period * borrowing.book.daily_fee) * 2
+        overdays = timezone.now().date() == borrowing.expected_return_date
+        amount_to_pay = ((expected_period * borrowing.book.daily_fee)
+                         + (overdays * 2))
     else:
-        amount_to_pay = (period * borrowing.book.daily_fee)
+        real_period = timezone.now().date() - borrowing.borrowing.borrow_date
+        amount_to_pay = real_period * borrowing.book.daily_fee
     return amount_to_pay
 
 
@@ -138,7 +144,8 @@ def webhook(request):
     endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
 
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        event = (stripe.Webhook
+                 .construct_event(payload, sig_header, endpoint_secret))
     except ValueError as e:
         # Invalid payload
         print(f"Invalid payload: {e}")

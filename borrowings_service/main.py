@@ -16,7 +16,8 @@ def get_expired_borrowers():
     current_datetime = timezone.now().date()
     for borrowing in borrowings:
         if borrowing.expected_return_date is not None:
-            expiration_days = (current_datetime - borrowing.expected_return_date).days
+            expiration_days = (
+                (current_datetime - borrowing.expected_return_date).days)
             borrower_data = {
                 "borrower": borrowing.user.email,
                 "expiration": expiration_days,
