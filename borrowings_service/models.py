@@ -72,6 +72,5 @@ class Payment(models.Model):
             daily_fee = self.borrowing_id.book.daily_fee
             period = (return_date - borrow_date).days
             charge = daily_fee * period
-
             return charge
         return 0
