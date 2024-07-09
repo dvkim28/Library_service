@@ -44,16 +44,20 @@ class TestBorrowingsModel(TestCase):
         self.book = sample_book()
         self.user = sample_user()
         self.borrowings = Borrowings.objects.create(
-            expected_return_date= timezone.now() + datetime.timedelta(days=1),
+            expected_return_date=timezone.now() + datetime.timedelta(days=1),
             book=self.book,
-            user = self.user
+            user=self.user
         )
 
     def test_borrowings_str_method(self):
-        self.assertEqual(str(self.borrowings), f"{self.borrowings.pk} "
-                                               f"|Book: {self.borrowings.book.title},"
-                                               f" Borrowed at {str(self.borrowings.borrow_date)}"
-                                               f" - {self.borrowings.user.email}")
+        self.assertEqual(str(self.borrowings),
+                         f"{self.borrowings.pk} "
+                         f"|Book: "
+                         f"{self.borrowings.book.title},"
+                         f" Borrowed at "
+                         f"{str(self.borrowings.borrow_date)}"
+                         f" - "
+                         f"{self.borrowings.user.email}")
 
 
 class TestPaymentsModel(TestCase):
@@ -67,8 +71,11 @@ class TestPaymentsModel(TestCase):
         self.payments = Payment.objects.create(
             status="Pending",
             type="Payment",
-            borrowing_id = self.borrowings
+            borrowing_id=self.borrowings
         )
 
     def test_payments_str_method(self):
-        self.assertEqual(str(self.payments), f"payment: {self.payments.status}, {self.payments.type}, {self.payments.borrowing_id}")
+        self.assertEqual(str(self.payments),
+                         f"payment: {self.payments.status}, "
+                         f"{self.payments.type},"
+                         f" {self.payments.borrowing_id}")
