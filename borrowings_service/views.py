@@ -1,8 +1,14 @@
 import stripe
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiParameter,
+    OpenApiExample
+)
 from rest_framework import permissions, status, viewsets
 from rest_framework.response import Response
 
@@ -36,30 +42,45 @@ class BorrowingsViewSet(viewsets.ModelViewSet):
         else:
             return BorrowingsSerializer
 
-    @transaction.atomic
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         book_title = serializer.validated_data["book"]
+
         try:
-            book = Book.objects.select_for_update().get(title=book_title)
-        except Book.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        try:
-            book.inventory -= 1
-            book.save()
-        except IntegrityError:
+            book = Book.objects.get(title=book_title)
+        except ObjectDoesNotExist:
+            return Response({"error": "Book not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+        except MultipleObjectsReturned:
+            return Response(
+                {"error": "Multiple books found with the same title"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if book.inventory <= 0:
             return Response(
                 {"error": "Book is out of stock"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        try:
+            with transaction.atomic():
+                book.inventory -= 1
+                book.save()
+        except IntegrityError:
+            return Response(
+                {"error": "Failed to update book inventory"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
         borrowing = serializer.save()
-        self.perform_create(serializer)
-        Payment.objects.create(
-            borrowing_id=borrowing,
-        )
-        create_stripe_payment(borrowing)
+
+        # Assuming borrowing_id is a ForeignKey to Borrowing model
+        Payment.objects.create(borrowing_id=borrowing)
+        create_stripe_payment(borrowing.id)
         send_telegram_message.delay(serializer.validated_data["user"].email)
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
@@ -84,6 +105,42 @@ class BorrowingsViewSet(viewsets.ModelViewSet):
         else:
             return self.queryset.filter(user=self.request.user)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="is_active",
+                description="Active borrowings its"
+                            " borrowings where return day is None",
+                required=False,
+                type=str,
+                examples=[
+                    OpenApiExample(
+                        "Example 1",
+                        description='Find route with destination '
+                                    '"Gare do Oriente"',
+                        value='true'
+                    )
+                ],
+            ),
+            OpenApiParameter(
+                name="user_id",
+                description="Find borrowings by specific user. "
+                            "Only for administrators",
+                required=False,
+                type=str,
+                examples=[
+                    OpenApiExample(
+                        "Example 1",
+                        description='Find borrowings by specific user',
+                        value='1'
+                    )
+                ],
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
 
 class PaymentsViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
@@ -93,7 +150,8 @@ class PaymentsViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(borrowing_id__user=self.request.user)
 
 
-def create_stripe_payment(borrowing):
+def create_stripe_payment(borrowing_id):
+    borrowing = Borrowings.objects.get(id=borrowing_id)
     payment = Payment.objects.get(borrowing_id=borrowing)
     amount_to_pay = get_fee_if_borrowing_overdue(borrowing)
     price = stripe.Price.create(
@@ -125,15 +183,18 @@ def create_stripe_payment(borrowing):
 
 
 def get_fee_if_borrowing_overdue(borrowing):
-    expected_period = ((borrowing.expected_return_date - borrowing.borrow_date)
-                       .days)
-    if timezone.now().date() > borrowing.expected_return_date:
-        overdays = timezone.now().date() == borrowing.expected_return_date
-        amount_to_pay = ((expected_period * borrowing.book.daily_fee)
-                         + (overdays * 2))
+    expected_return_date = borrowing.expected_return_date
+    borrow_date = borrowing.borrow_date
+    daily_fee = borrowing.book.daily_fee
+
+    if timezone.now().date() > expected_return_date:
+        overdue_days = (timezone.now().date() - expected_return_date).days
+        amount_to_pay = ((borrowing.expected_period * daily_fee)
+                         + (overdue_days * 2))
     else:
-        real_period = timezone.now().date() - borrowing.borrowing.borrow_date
-        amount_to_pay = real_period * borrowing.book.daily_fee
+        real_period = (timezone.now().date() - borrow_date).days
+        amount_to_pay = real_period * daily_fee
+
     return amount_to_pay
 
 
